@@ -1,33 +1,50 @@
-import dynamixel_classes_for_windows as dyna
-import kbhit
-import time
+import dynamixel_classes_for_windows as dyna      # ROBOTIS公式Python例に基づく[1]
+import time                                       # 標準ライブラリ[2]
 
-try:
-  ###---------
-  dxl = dyna.Dynamixel("COM3",57600) #インスタンス化
-  kb = kbhit.KBHit() #キーボード入力のクラス立ち上げ
-  time.sleep(0.5)  #通信が確立するまでちょっと待つ（待たなくても良いが高速すぎるとバッファが溢れ命令実行漏れが発生する）
-  dxl.set_mode_position(1) #位置（角度）制御モードに設定
-  min_1=0
-  max_1=4095
-  dxl.set_min_max_position(1,min_1,max_1) #位置の上下限を設定
-  now_goal1=int(dxl.read_position(1)) #現在の位置を取得し目標値の初期値として代入
-  dxl.enable_torque(1) #トルクをオンにする（手で動かせなくなる）
-  print("---------------------------------")
-  print("   Dynamixel READY TO MOVE  ")
-  print("---------------------------------")
- 
-  while 1:
-    if kb.kbhit(): #キーボードの打鍵があったら（無いときはここで待ち状態になる）
-      c = ord(kb.getch()) #キー入力を数値（番号）に変換
-      if c==75: #L arrow #左矢印なら
-        now_goal1=now_goal1+50  #目標値を50増やす
-      elif c==77: #R arrow
-        now_goal1=now_goal1-50
-      now_goal1=max(min_1,min(now_goal1,max_1)) #数値的に上下限を超えないようにする
-      dxl.write_position(1,now_goal1)  #Dynamixelに数値を書き込む
+DEG_PER_COUNT = 360 / 4095                        # 12-bit分解能の角度換算[1]
 
-except KeyboardInterrupt: #Ctrl+Cが押されたら
-  dxl.disable_torque(1) #トルクをオフにする（手で動かせるようになる）
-  dxl.close_port() #ポートを切断する
-  kb.set_normal_term() #キー入力に対する応答を通常時に戻す？）
+def deg_to_cnt(deg):
+    """度→エンコーダカウント変換"""                # 変換式は公式マニュアル[1]
+    return int(round(deg / DEG_PER_COUNT))
+
+def sweep_dynamixel(port="COM3", baud=1_000_000,
+                    start_deg=0, goal_deg=30,
+                    step_deg=2, total_time=1.6,
+                    servo_id=1):
+    dxl = dyna.Dynamixel(port, baud)              # ポートオープン[2]
+    time.sleep(0.5)                               # ハンドシェイク待ち[2]
+
+    dxl.set_mode_position(servo_id)               # 位置制御モード[1]
+    dxl.set_min_max_position(servo_id, 0, 4095)   # 制限角全域を許可[1]
+    dxl.enable_torque(servo_id)                   # トルクONで保持[1]
+
+    # 角度列を作成（正負方向どちらも対応）[2]
+    direction = 1 if goal_deg >= start_deg else -1
+    step_deg *= direction
+    angles = []
+    cur = start_deg
+    while (cur - goal_deg) * direction <= 0:      # 終点を含むまでループ[2]
+        angles.append(cur)
+        cur += step_deg
+    if angles[-1] != goal_deg:                    # 端数があれば追加[2]
+        angles.append(goal_deg)
+
+    # インターバルを計算（総時間÷ステップ数−1）[2]
+    if len(angles) > 1:
+        pause = total_time / (len(angles) - 1)
+    else:
+        pause = 0
+
+    # 実行ループ[2]
+    for deg in angles:
+        dxl.write_position(servo_id, deg_to_cnt(deg))  # 角度書込み[1]
+        time.sleep(pause)                              # 指定間隔待ち[2]
+
+    # 最終角度で待機（トルクがONなので保持）[1]
+    # dxl.disable_torque(servo_id)  # 必要なら解除[2]
+    # dxl.close_port()              # 終了時にポートを閉じる[2]
+
+# 例：0 °→30 °を2 °刻み，1.6 秒で到達
+if __name__ == "__main__":
+    sweep_dynamixel(start_deg=0, goal_deg=30,
+                    step_deg=2, total_time=1.6)
