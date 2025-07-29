@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from ctypes import *
-# import time
+import time
 
 class MPSSEMultiCh:
     ver = '21.9.23'
@@ -179,18 +179,57 @@ class MPSSEMultiCh:
             ('ftHandle', c_void_p)
         ]
 
+# if __name__ == '__main__':
+#     mpsse = MPSSEMultiCh('./libMPSSE.dll')
+#     mpsse.showDevices()
+#     cs = [0]*2
+#     cs[0] = mpsse.openChannel(0)
+#     # cs[1] = mpsse.openChannel(1)
+
+#     # direction = c_uint8(int(255))
+#     # gpioValue = (1<<8)-1-(1 << 2)
+#     # mpsse.dll.FT_WriteGPIO(mpsse.pChannelHandle, direction, gpioValue)
+#     # time.sleep(1.0)
+#     # mpsse.dll.FT_WriteGPIO(mpsse.pChannelHandle, direction, direction)
+
+#     mpsse.closeChannel(cs[0])
+#     # mpsse.closeChannel(cs[1])
+
+
+# if __name__ == '__main__':
+#     mpsse = MPSSEMultiCh('./libMPSSE.dll')
+#     mpsse.showDevices()
+
+#     ch = mpsse.openChannel(0)  # 0番チャネルを使用
+#     cs = 0  # チップセレクト番号。回路によっては 1や2 かもしれません
+
+#     # 送信データ（例えば、デバイスに依存するコマンド）
+#     send_data = [0x9F]  # SPIフラッシュなどの JEDEC ID 読み取りコマンドの例
+#     recv_data = mpsse.spiReadWrite(ch, cs, send_data)
+
+#     print(f"Received data: {recv_data}")  # 結果を表示
+
+#     mpsse.closeChannel(ch)
+
+
 if __name__ == '__main__':
     mpsse = MPSSEMultiCh('./libMPSSE.dll')
     mpsse.showDevices()
-    ch = [0]*2
-    ch[0] = mpsse.openChannel(0)
-    ch[1] = mpsse.openChannel(1)
 
-    # direction = c_uint8(int(255))
-    # gpioValue = (1<<8)-1-(1 << 2)
-    # mpsse.dll.FT_WriteGPIO(mpsse.pChannelHandle, direction, gpioValue)
-    # time.sleep(1.0)
-    # mpsse.dll.FT_WriteGPIO(mpsse.pChannelHandle, direction, direction)
+    ch = mpsse.openChannel(0)  # チャンネル0を開く
 
-    mpsse.closeChannel(ch[0])
-    mpsse.closeChannel(ch[1])
+    try:
+        # ビット0のみ入力（dir=0）、他は出力（1）→方向: 0b11111110 = 0xFE
+        dir_mask = 0b11111110
+        out_value = 0b00000000  # 出力ピンは全てLowにする
+        mpsse.gpioWrite(ch, dir_mask, out_value)
+
+        while True:
+            value = mpsse.gpioRead(ch)
+            print(f"GPIO value: {bin(value)}")
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("終了します。")
+
+    mpsse.closeChannel(ch)

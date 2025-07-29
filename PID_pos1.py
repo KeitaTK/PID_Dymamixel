@@ -5,11 +5,11 @@
 """
 import time
 import dynamixel_classes_for_windows as dyna       # DYNAMIXEL 制御
-from mpsse_multich import MPSSEMultiCh             # SPI ラッパ
+from MPSSEMultiCh import MPSSEMultiCh             # SPI ラッパ
 
 ############################# 設定 #############################
 DXL_ID      = 1
-PORT        = "COM3"
+PORT        = "COM9"
 BAUD        = 1_000_000
 SPI_DLL     = "./libMPSSE.dll"
 ENC_CH      = 0           # FT232H チャネル
@@ -23,7 +23,8 @@ Kp, Ki, Kd = 3.0, 25.0, 0.08
 ############################# 初期化 #############################
 dxl = dyna.Dynamixel(PORT, BAUD)
 time.sleep(0.5)
-dxl.set_mode_pwm(DXL_ID)           # PWM モードで内部 PID 無効
+# dxl.set_mode_pwm(DXL_ID)           # PWM モードで内部 PID 無効
+dxl.set_mode_position(DXL_ID) # 角度制御モードに設定
 dxl.enable_torque(DXL_ID)
 
 spi = MPSSEMultiCh(SPI_DLL)

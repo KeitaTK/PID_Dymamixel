@@ -3,9 +3,9 @@ import kbhit
 import time
 
 try:
-    motor_id = 1  # ここに制御したいDynamixelのIDを指定
+    motor_id = 2  # ここに制御したいDynamixelのIDを指定
 
-    dxl = dyna.Dynamixel("COM3", 57600)  # インスタンス化
+    dxl = dyna.Dynamixel("COM3", 1000000)  # インスタンス化
     kb = kbhit.KBHit()  # キーボード入力のクラス立ち上げ
     time.sleep(0.5)  # 通信が確立するまでちょっと待つ
 
